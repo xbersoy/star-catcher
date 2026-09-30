@@ -217,16 +217,22 @@ flame.play();
 // (for collisions) we convert: orb local → global (screen) → world local.
 // ---------------------------------------------------------------------------
 const orbit = new Container();
-const orb = new Graphics()             // a Graphics can also be displayed directly
-  .circle(0, 0, 15).fill({ color: 0x4cc9f0, alpha: 0.25 })
-  .circle(0, 0, 9).fill(0x4cc9f0);
-orb.x = 62;
-orbit.addChild(orb);
+// EXERCISE 6 — two orbs. Both are children of the same `orbit` container,
+// so rotating `orbit` once moves them both around the ship.
+function makeOrb(x, color) {
+  const orb = new Graphics() // a Graphics can also be displayed directly
+    .circle(0, 0, 15).fill({ color, alpha: 0.25 })
+    .circle(0, 0, 9).fill(color);
+  orb.x = x;
+  return orb;
+}
+const orbs = [makeOrb(62, 0x4cc9f0), makeOrb(-62, 0xb388ff)];
+orbit.addChild(...orbs);
 
 ship.addChild(flame, shipBody, orbit); // flame first → drawn behind the body
 world.addChild(ship);
 
-function orbPositionInWorld() {
+function orbPositionInWorld(orb) {
   const global = orb.toGlobal({ x: 0, y: 0 }); // orb's centre in screen space
   return world.toLocal(global);                // …expressed in world space
 }
@@ -754,7 +760,7 @@ function updateStars(dt) {
 }
 
 function updateMeteors(dt) {
-  const orbPos = orbPositionInWorld();
+  const orbPositions = orbs.map((orb) => orbPositionInWorld(orb));
   for (let i = meteors.length - 1; i >= 0; i--) {
     const m = meteors[i];
     if (m !== dragTarget) { // the pointer moves a dragged meteor, not physics
@@ -763,7 +769,7 @@ function updateMeteors(dt) {
     }
     m.rotation += m.spin * dt;
 
-    if (hits(m.x, m.y, m.radius, orbPos.x, orbPos.y, 14 * ship.scale.x)) {
+    if (orbPositions.some((p) => hits(m.x, m.y, m.radius, p.x, p.y, 14 * ship.scale.x))) {
       burst(m.x, m.y, 0xffa94d, 26);
       popup('SMASH +1', m.x, m.y, 0xffa94d);
       setScore(game.score + 1);
