@@ -361,6 +361,17 @@ const blurFilter = new BlurFilter({ strength: 6 });
 const grayFilter = new ColorMatrixFilter();
 grayFilter.desaturate();
 
+// EXERCISE 5 — a short blur "impact" when a meteor hits the ship. One filter
+// instance is reused; we only animate its strength.
+const hitBlur = new BlurFilter({ strength: 0 });
+
+function updateHitBlur(dt) {
+  if (game.hitBlur <= 0) return;
+  game.hitBlur = Math.max(0, game.hitBlur - 0.4 * dt);
+  hitBlur.strength = game.hitBlur;
+  if (game.hitBlur === 0) world.filters = null; // remove it: filters cost GPU time
+}
+
 function setBackdropFilters(on) {
   const list = on ? [blurFilter, grayFilter] : null;
   world.filters = list;
@@ -430,7 +441,7 @@ menu.addChild(dim, titleText, subtitleText, menuButton);
 // Game state
 // ---------------------------------------------------------------------------
 let state = 'menu'; // 'menu' | 'play' | 'paused' | 'over'
-const game = { score: 0, best: 0, energy: 100, elapsed: 0, starTimer: 0, meteorTimer: 1, heartTimer: 8, shake: 0, hitFlash: 0 };
+const game = { score: 0, best: 0, energy: 100, elapsed: 0, starTimer: 0, meteorTimer: 1, heartTimer: 8, shake: 0, hitFlash: 0, hitBlur: 0 };
 const stars = [];
 const meteors = [];
 const hearts = [];
@@ -492,6 +503,7 @@ function startGame() {
   game.meteorTimer = 1.5;
   game.heartTimer = 8;
   dragTarget = null;
+  game.hitBlur = 0;
   state = 'play';
   hideMenu();
 }
@@ -505,6 +517,7 @@ function resume() {
   if (state !== 'paused') return;
   state = 'play';
   hideMenu();
+  if (game.hitBlur > 0) world.filters = [hitBlur]; // EXERCISE 5 — keep an unfinished blur
 }
 
 function gameOver() {
@@ -693,6 +706,7 @@ app.ticker.add((ticker) => {
   updateStars(dt);
   updateMeteors(dt);
   updateHearts(dt);
+  updateHitBlur(dt);
 
   // Energy bar: scale the MASK, not the bar (CONCEPT 10)
   barMask.scale.x = clamp(game.energy / 100, 0, 1);
@@ -758,6 +772,8 @@ function updateMeteors(dt) {
       game.energy -= 25;
       game.shake = 14;
       game.hitFlash = 24;
+      game.hitBlur = hitBlur.strength = 8; // EXERCISE 5
+      world.filters = [hitBlur];
       burst(m.x, m.y, 0xff4d6d, 30);
       removeFrom(meteors, m);
     } else if (
