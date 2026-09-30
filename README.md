@@ -50,7 +50,7 @@ Search `CONCEPT n` in `main.js` to jump to each lesson.
 5. **Filters:** add a brief `BlurFilter` on the world when the ship is hit. — *Done: search `EXERCISE 5` in main.js.*
 6. **Scene graph:** add a second orb to `orbit` at `x = -62`. — *Done: search `EXERCISE 6` in main.js. The second orb is purple.*
 7. **Performance:** pool stars and meteors the same way particles are pooled. — *Done: search `EXERCISE 7` in main.js.*
-8. **Renderer:** set `preference: 'webgpu'` in `app.init` and compare.
+8. **Renderer:** set `preference: 'webgpu'` in `app.init` and compare. — *Done: search `EXERCISE 8` in main.js. Open with `?renderer=webgpu`; the top-right label shows the renderer and FPS.*
 
 Tip: install the **PixiJS DevTools** browser extension — `main.js` exposes
 `__PIXI_APP__` so you can inspect the live scene tree.

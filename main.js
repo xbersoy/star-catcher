@@ -39,6 +39,10 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 //   • app.ticker   – a requestAnimationFrame loop that re-renders every frame
 // In v8, setup is async: create it, then `await app.init(options)`.
 // ---------------------------------------------------------------------------
+// EXERCISE 8 — choose the renderer from the URL: ?renderer=webgpu
+// (default is WebGL). If WebGPU isn't available, Pixi falls back to WebGL.
+const params = new URLSearchParams(location.search);
+
 const app = new Application();
 await app.init({
   background: '#070b1a',
@@ -46,7 +50,7 @@ await app.init({
   antialias: true,
   autoDensity: true,         // keeps CSS size correct on retina screens
   resolution: Math.min(window.devicePixelRatio, 2),
-  // preference: 'webgpu',   // try this to opt into the WebGPU renderer
+  preference: params.get('renderer') === 'webgpu' ? 'webgpu' : 'webgl',
 });
 document.body.appendChild(app.canvas);
 globalThis.__PIXI_APP__ = app; // lets the "PixiJS DevTools" browser extension inspect the scene
@@ -62,7 +66,7 @@ const loadingEl = document.getElementById('loading');
 // resolver the image is double resolution, so the texture still measures
 // 64×80 in-game but stays crisp on retina screens. Add ?ship=svg to the URL
 // to load the original SVG instead and compare.
-const shipFormat = new URLSearchParams(location.search).get('ship') === 'svg' ? 'svg' : 'png';
+const shipFormat = params.get('ship') === 'svg' ? 'svg' : 'png';
 Assets.add({ alias: 'ship-svg', src: './assets/ship.svg', data: { resolution: 2 } });
 Assets.add({ alias: 'ship-png', src: './assets/ship@2x.png' });
 const shipAlias = `ship-${shipFormat}`;
@@ -282,7 +286,12 @@ const barMask = new Graphics().roundRect(0, 0, BAR_W, BAR_H, 8).fill(0xffffff);
 barFill.mask = barMask;
 energyBar.addChild(barBack, barFill, barMask);
 
-hud.addChild(scoreText, bestText, energyBar);
+// EXERCISE 8 — show the active renderer and the FPS so you can compare them.
+const rendererText = new Text({ text: '', style: bestStyle });
+rendererText.anchor.set(1, 0); // right-aligned: anchor on its right edge
+let fpsTimer = 0;
+
+hud.addChild(scoreText, bestText, energyBar, rendererText);
 
 // ---------------------------------------------------------------------------
 // CONCEPT 12 — ParticleContainer + blend modes
@@ -698,6 +707,13 @@ app.ticker.add((ticker) => {
   const dt = ticker.deltaTime;
   const seconds = ticker.deltaMS / 1000;
 
+  // EXERCISE 8 — refresh the renderer/FPS label twice a second (not every frame)
+  fpsTimer += seconds;
+  if (fpsTimer >= 0.5) {
+    fpsTimer = 0;
+    rendererText.text = `${app.renderer.name.toUpperCase()} · ${Math.round(ticker.FPS)} fps`;
+  }
+
   // Background scrolls in every state except pause
   if (state !== 'paused') {
     const speedUp = state === 'play' ? 1 + game.elapsed / 40 : 1;
@@ -856,6 +872,7 @@ function layout() {
   farStars.width = nearStars.width = width;
   farStars.height = nearStars.height = height;
   ship.y = height - 110;
+  rendererText.position.set(width - 20, 16);
   // ParticleContainer skips bounds math for speed, so tell it its area
   // (otherwise filters applied to `world` could clip the particles).
   particles.boundsArea = new Rectangle(0, 0, width, height);
