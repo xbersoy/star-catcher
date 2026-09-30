@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Star Catcher – PixiJS Core Concepts</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #070b1a; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; color: #cdd6ff; font-size: 20px; }
+    #guide {
+      position: fixed; right: 12px; bottom: 12px; max-width: 320px; z-index: 10;
+      background: rgba(10, 14, 40, 0.85); color: #dfe6ff; border: 1px solid #3b4a8a;
+      border-radius: 10px; padding: 8px 14px; font-size: 13px; line-height: 1.45;
+    }
+    #guide summary { cursor: pointer; font-weight: 600; }
+    #guide ol { padding-left: 20px; margin: 8px 0 4px; }
+    #guide code { color: #ffd166; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading…</div>
+
+  <details id="guide">
+    <summary>Concepts in this demo (search "CONCEPT" in main.js)</summary>
+    <ol>
+      <li><code>Application</code> – renderer, stage, ticker</li>
+      <li><code>Assets</code> – loading the ship SVG</li>
+      <li><code>Graphics</code> → <code>generateTexture</code></li>
+      <li>Scene graph – <code>Container</code> layers &amp; <code>zIndex</code></li>
+      <li><code>TilingSprite</code> – scrolling starfield</li>
+      <li><code>Sprite</code> transforms – anchor, rotation, scale, tint</li>
+      <li><code>AnimatedSprite</code> – engine flame</li>
+      <li>Local vs global coords – <code>toGlobal</code>/<code>toLocal</code></li>
+      <li><code>Text</code> &amp; <code>TextStyle</code> – HUD</li>
+      <li>Masks – energy bar</li>
+      <li>Events – pointer, click, keyboard</li>
+      <li><code>ParticleContainer</code> + blend modes</li>
+      <li>Filters – blur &amp; grayscale on pause</li>
+      <li><code>Ticker</code> – the game loop &amp; deltaTime</li>
+      <li>Resize / layout</li>
+      <li>Cleanup – <code>destroy()</code> &amp; pooling</li>
+    </ol>
+  </details>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
