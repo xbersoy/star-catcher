@@ -496,11 +496,11 @@ function setScore(value) {
 
 function startGame() {
   // CONCEPT 16 — clean up everything from the previous round
-  for (const s of stars) s.destroy();
-  for (const m of meteors) m.destroy();
+  while (stars.length) release(stars, stars[0], freeStars);        // EXERCISE 7
+  while (meteors.length) release(meteors, meteors[0], freeMeteors);
   for (const t of popups) t.destroy();
   for (const h of hearts) h.destroy();
-  stars.length = meteors.length = popups.length = hearts.length = 0;
+  popups.length = hearts.length = 0;
 
   setScore(0);
   game.energy = 100;
@@ -539,15 +539,18 @@ function gameOver() {
 // ---------------------------------------------------------------------------
 const STAR_COLORS = [0xffd166, 0x4cc9f0, 0xf72585, 0x80ffdb, 0xffffff];
 
-function spawnStar() {
+// EXERCISE 7 — object pools. Creating and destroying Sprites all the time
+// makes garbage for the GC to clean up (which can cause stutters). Instead,
+// finished sprites are parked in a "free" list and reused by the next spawn.
+// Things that never change (anchor, zIndex, event listeners) are set up ONCE
+// in create*(); spawn*() only resets what differs per use.
+const freeStars = [];
+const freeMeteors = [];
+
+function createStar() {
   const star = new Sprite(starTexture); // many Sprites share ONE texture: cheap
   star.anchor.set(0.5);
-  star.position.set(rand(30, app.screen.width - 30), -30);
-  star.tint = pick(STAR_COLORS);        // colour a white texture per sprite
-  star.scale.set(rand(0.8, 1.25));
   star.zIndex = 5;
-  star.vy = rand(2, 3.5);               // custom fields for our own logic
-  star.spin = rand(-0.08, 0.08);
 
   // CONCEPT 11 — per-object events. `hitArea` makes it easier to click.
   star.eventMode = 'static';
@@ -556,22 +559,25 @@ function spawnStar() {
   star.on('pointerdown', () => {
     if (state === 'play') collectStar(star, 3);
   });
+  return star;
+}
 
+function spawnStar() {
+  const star = freeStars.pop() ?? createStar();
+  star.position.set(rand(30, app.screen.width - 30), -30);
+  star.tint = pick(STAR_COLORS);        // colour a white texture per sprite
+  star.scale.set(rand(0.8, 1.25));
+  star.rotation = 0;
+  star.vy = rand(2, 3.5);               // custom fields for our own logic
+  star.spin = rand(-0.08, 0.08);
   world.addChild(star);
   stars.push(star);
 }
 
-function spawnMeteor(difficulty) {
-  const meteor = new Sprite(pick(meteorTextures));
+function createMeteor() {
+  const meteor = new Sprite(meteorTextures[0]);
   meteor.anchor.set(0.5);
-  const scale = rand(0.8, 1.5);
-  meteor.scale.set(scale);
-  meteor.position.set(rand(30, app.screen.width - 30), -40);
   meteor.zIndex = 6;
-  meteor.vx = rand(-0.8, 0.8);
-  meteor.vy = rand(2.5, 4) * Math.min(difficulty, 2.5);
-  meteor.spin = rand(-0.05, 0.05);
-  meteor.radius = 22 * scale;
 
   // EXERCISE 4 — draggable meteors: grab one and fling it into your orb.
   meteor.eventMode = 'static';
@@ -581,9 +587,32 @@ function spawnMeteor(difficulty) {
     dragTarget = meteor;
     meteor.cursor = 'grabbing';
   });
+  return meteor;
+}
 
+function spawnMeteor(difficulty) {
+  const meteor = freeMeteors.pop() ?? createMeteor();
+  meteor.texture = pick(meteorTextures); // swapping textures is cheap
+  const scale = rand(0.8, 1.5);
+  meteor.scale.set(scale);
+  meteor.position.set(rand(30, app.screen.width - 30), -40);
+  meteor.rotation = 0;
+  meteor.cursor = 'grab';
+  meteor.vx = rand(-0.8, 0.8);
+  meteor.vy = rand(2.5, 4) * Math.min(difficulty, 2.5);
+  meteor.spin = rand(-0.05, 0.05);
+  meteor.radius = 22 * scale;
   world.addChild(meteor);
   meteors.push(meteor);
+}
+
+// EXERCISE 7 — give a star/meteor back to its pool instead of destroying it.
+function release(list, obj, pool) {
+  const i = list.indexOf(obj);
+  if (i !== -1) list.splice(i, 1);
+  if (obj === dragTarget) dragTarget = null;
+  obj.removeFromParent(); // off the stage → not drawn, gets no events
+  pool.push(obj);
 }
 
 // EXERCISE 2 — a rare heart that restores 25 energy
@@ -611,7 +640,7 @@ function collectStar(star, points) {
   setScore(game.score + points);
   burst(star.x, star.y, star.tint, points > 1 ? 30 : 18);
   popup(`+${points}`, star.x, star.y - 10, star.tint);
-  removeFrom(stars, star);
+  release(stars, star, freeStars);
 }
 
 const hits = (ax, ay, ar, bx, by, br) => (ax - bx) ** 2 + (ay - by) ** 2 < (ar + br) ** 2;
@@ -754,7 +783,7 @@ function updateStars(dt) {
     if (hits(star.x, star.y, 18, ship.x, ship.y, 32 * ship.scale.x)) {
       collectStar(star, 1);
     } else if (star.y > app.screen.height + 40) {
-      removeFrom(stars, star);
+      release(stars, star, freeStars);
     }
   }
 }
@@ -773,7 +802,7 @@ function updateMeteors(dt) {
       burst(m.x, m.y, 0xffa94d, 26);
       popup('SMASH +1', m.x, m.y, 0xffa94d);
       setScore(game.score + 1);
-      removeFrom(meteors, m);
+      release(meteors, m, freeMeteors);
     } else if (hits(m.x, m.y, m.radius, ship.x, ship.y, 26 * ship.scale.x)) {
       game.energy -= 25;
       game.shake = 14;
@@ -781,12 +810,12 @@ function updateMeteors(dt) {
       game.hitBlur = hitBlur.strength = 8; // EXERCISE 5
       world.filters = [hitBlur];
       burst(m.x, m.y, 0xff4d6d, 30);
-      removeFrom(meteors, m);
+      release(meteors, m, freeMeteors);
     } else if (
       m.y > app.screen.height + 60 || m.y < -200 || // flung meteors can leave
       m.x < -100 || m.x > app.screen.width + 100    // through any edge now
     ) {
-      removeFrom(meteors, m);
+      release(meteors, m, freeMeteors);
     }
   }
 }

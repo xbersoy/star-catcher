@@ -49,7 +49,7 @@ Search `CONCEPT n` in `main.js` to jump to each lesson.
 4. **Events:** make meteors draggable (`pointerdown` → track `pointermove` → `pointerup`). — *Done: search `EXERCISE 4` in main.js. Fling them into the orb to smash them.*
 5. **Filters:** add a brief `BlurFilter` on the world when the ship is hit. — *Done: search `EXERCISE 5` in main.js.*
 6. **Scene graph:** add a second orb to `orbit` at `x = -62`. — *Done: search `EXERCISE 6` in main.js. The second orb is purple.*
-7. **Performance:** pool stars and meteors the same way particles are pooled.
+7. **Performance:** pool stars and meteors the same way particles are pooled. — *Done: search `EXERCISE 7` in main.js.*
 8. **Renderer:** set `preference: 'webgpu'` in `app.init` and compare.
 
 Tip: install the **PixiJS DevTools** browser extension — `main.js` exposes
