@@ -58,12 +58,19 @@ globalThis.__PIXI_APP__ = app; // lets the "PixiJS DevTools" browser extension i
 // Loading the same alias twice returns the cached texture — no re-download.
 // ---------------------------------------------------------------------------
 const loadingEl = document.getElementById('loading');
-Assets.add({ alias: 'ship', src: './assets/ship.svg', data: { resolution: 2 } });
-const loaded = await Assets.load(['ship'], (progress) => {
+// EXERCISE 3 — the ship is now a PNG. The "@2x" in the file name tells the
+// resolver the image is double resolution, so the texture still measures
+// 64×80 in-game but stays crisp on retina screens. Add ?ship=svg to the URL
+// to load the original SVG instead and compare.
+const shipFormat = new URLSearchParams(location.search).get('ship') === 'svg' ? 'svg' : 'png';
+Assets.add({ alias: 'ship-svg', src: './assets/ship.svg', data: { resolution: 2 } });
+Assets.add({ alias: 'ship-png', src: './assets/ship@2x.png' });
+const shipAlias = `ship-${shipFormat}`;
+const loaded = await Assets.load([shipAlias], (progress) => {
   loadingEl.textContent = `Loading… ${Math.round(progress * 100)}%`;
 });
 loadingEl.remove();
-const shipTexture = loaded.ship;
+const shipTexture = loaded[shipAlias];
 
 // ---------------------------------------------------------------------------
 // CONCEPT 3 — Graphics & generateTexture
