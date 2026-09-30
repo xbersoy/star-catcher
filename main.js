@@ -450,6 +450,11 @@ function onMenuAction() {
 function setScore(value) {
   game.score = value;
   scoreText.text = `Score: ${value}`; // only called when the score changes
+
+  // EXERCISE 1 — Transforms: the ship grows 5% every 10 points (max +50%).
+  // Scaling the parent Container scales everything inside it — body, flame
+  // and the orb (even the orbit radius grows, because it's a child too).
+  ship.scale.set(1 + Math.min(Math.floor(value / 10) * 0.05, 0.5));
 }
 
 function startGame() {
@@ -655,7 +660,7 @@ function updateStars(dt) {
     const star = stars[i];
     star.y += star.vy * dt;
     star.rotation += star.spin * dt;
-    if (hits(star.x, star.y, 18, ship.x, ship.y, 32)) {
+    if (hits(star.x, star.y, 18, ship.x, ship.y, 32 * ship.scale.x)) {
       collectStar(star, 1);
     } else if (star.y > app.screen.height + 40) {
       removeFrom(stars, star);
@@ -671,12 +676,12 @@ function updateMeteors(dt) {
     m.y += m.vy * dt;
     m.rotation += m.spin * dt;
 
-    if (hits(m.x, m.y, m.radius, orbPos.x, orbPos.y, 14)) {
+    if (hits(m.x, m.y, m.radius, orbPos.x, orbPos.y, 14 * ship.scale.x)) {
       burst(m.x, m.y, 0xffa94d, 26);
       popup('SMASH +1', m.x, m.y, 0xffa94d);
       setScore(game.score + 1);
       removeFrom(meteors, m);
-    } else if (hits(m.x, m.y, m.radius, ship.x, ship.y, 26)) {
+    } else if (hits(m.x, m.y, m.radius, ship.x, ship.y, 26 * ship.scale.x)) {
       game.energy -= 25;
       game.shake = 14;
       game.hitFlash = 24;
