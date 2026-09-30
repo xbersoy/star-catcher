@@ -110,6 +110,17 @@ const particleTexture = bake(
     .circle(0, 0, 2.5).fill({ color: 0xffffff, alpha: 1 })
 );
 
+// EXERCISE 2 — a heart built from simple shapes in ONE Graphics object:
+// two circles + a triangle, each filled with the same colour.
+const HEART_COLOR = 0xff4d6d;
+const heartTexture = bake(
+  new Graphics()
+    .circle(-7, -3, 8).fill(HEART_COLOR)
+    .circle(7, -3, 8).fill(HEART_COLOR)
+    .poly([-14.6, -1, 14.6, -1, 0, 17]).fill(HEART_COLOR)
+    .circle(-9, -6, 2.5).fill({ color: 0xffffff, alpha: 0.7 }) // shine
+);
+
 // A square tile of random dots. We pass an explicit `frame` so the texture is
 // exactly 512×512 — important for seamless tiling (CONCEPT 5).
 function makeStarfieldTexture(size, count, maxRadius) {
@@ -412,9 +423,10 @@ menu.addChild(dim, titleText, subtitleText, menuButton);
 // Game state
 // ---------------------------------------------------------------------------
 let state = 'menu'; // 'menu' | 'play' | 'paused' | 'over'
-const game = { score: 0, best: 0, energy: 100, elapsed: 0, starTimer: 0, meteorTimer: 1, shake: 0, hitFlash: 0 };
+const game = { score: 0, best: 0, energy: 100, elapsed: 0, starTimer: 0, meteorTimer: 1, heartTimer: 8, shake: 0, hitFlash: 0 };
 const stars = [];
 const meteors = [];
+const hearts = [];
 let targetX = app.screen.width / 2;
 const keys = new Set();
 
@@ -462,13 +474,15 @@ function startGame() {
   for (const s of stars) s.destroy();
   for (const m of meteors) m.destroy();
   for (const t of popups) t.destroy();
-  stars.length = meteors.length = popups.length = 0;
+  for (const h of hearts) h.destroy();
+  stars.length = meteors.length = popups.length = hearts.length = 0;
 
   setScore(0);
   game.energy = 100;
   game.elapsed = 0;
   game.starTimer = 0;
   game.meteorTimer = 1.5;
+  game.heartTimer = 8;
   state = 'play';
   hideMenu();
 }
@@ -532,6 +546,18 @@ function spawnMeteor(difficulty) {
   meteor.radius = 22 * scale;
   world.addChild(meteor);
   meteors.push(meteor);
+}
+
+// EXERCISE 2 — a rare heart that restores 25 energy
+function spawnHeart() {
+  const heart = new Sprite(heartTexture);
+  heart.anchor.set(0.5);
+  heart.position.set(rand(40, app.screen.width - 40), -30);
+  heart.zIndex = 5;
+  heart.vy = 2.2;
+  heart.age = 0;
+  world.addChild(heart);
+  hearts.push(heart);
 }
 
 function removeFrom(list, obj) {
@@ -620,8 +646,15 @@ app.ticker.add((ticker) => {
     game.meteorTimer = 1.6 / difficulty + rand(0, 0.5);
   }
 
+  game.heartTimer -= seconds;
+  if (game.heartTimer <= 0) {
+    if (game.energy < 100) spawnHeart(); // only when you actually need it
+    game.heartTimer = rand(8, 12);
+  }
+
   updateStars(dt);
   updateMeteors(dt);
+  updateHearts(dt);
 
   // Energy bar: scale the MASK, not the bar (CONCEPT 10)
   barMask.scale.x = clamp(game.energy / 100, 0, 1);
@@ -689,6 +722,23 @@ function updateMeteors(dt) {
       removeFrom(meteors, m);
     } else if (m.y > app.screen.height + 60) {
       removeFrom(meteors, m);
+    }
+  }
+}
+
+function updateHearts(dt) {
+  for (let i = hearts.length - 1; i >= 0; i--) {
+    const h = hearts[i];
+    h.y += h.vy * dt;
+    h.age += dt;
+    h.scale.set(1 + Math.sin(h.age * 0.15) * 0.12); // heartbeat pulse
+    if (hits(h.x, h.y, 16, ship.x, ship.y, 32 * ship.scale.x)) {
+      game.energy = Math.min(100, game.energy + 25);
+      burst(h.x, h.y, HEART_COLOR, 24);
+      popup('+25 ENERGY', h.x, h.y - 10, 0xff8fa3);
+      removeFrom(hearts, h);
+    } else if (h.y > app.screen.height + 40) {
+      removeFrom(hearts, h);
     }
   }
 }

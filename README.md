@@ -44,7 +44,7 @@ Search `CONCEPT n` in `main.js` to jump to each lesson.
 ## Suggested exercises
 
 1. **Transforms:** make the ship grow slightly (`scale`) every 10 points. — *Done: search `EXERCISE 1` in main.js. Collision radii scale with the ship too.*
-2. **Graphics:** add a new collectible — a heart drawn with `Graphics` that restores 25 energy.
+2. **Graphics:** add a new collectible — a heart drawn with `Graphics` that restores 25 energy. — *Done: search `EXERCISE 2` in main.js. Hearts only spawn while energy is below 100.*
 3. **Assets:** replace `assets/ship.svg` with your own PNG (just change the `src`).
 4. **Events:** make meteors draggable (`pointerdown` → track `pointermove` → `pointerup`).
 5. **Filters:** add a brief `BlurFilter` on the world when the ship is hit.
