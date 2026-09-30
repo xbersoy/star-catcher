@@ -436,6 +436,7 @@ const meteors = [];
 const hearts = [];
 let targetX = app.screen.width / 2;
 const keys = new Set();
+let dragTarget = null; // EXERCISE 4 — the meteor currently being dragged
 
 function showMenu(mode) {
   menu.visible = true;
@@ -490,6 +491,7 @@ function startGame() {
   game.starTimer = 0;
   game.meteorTimer = 1.5;
   game.heartTimer = 8;
+  dragTarget = null;
   state = 'play';
   hideMenu();
 }
@@ -551,6 +553,16 @@ function spawnMeteor(difficulty) {
   meteor.vy = rand(2.5, 4) * Math.min(difficulty, 2.5);
   meteor.spin = rand(-0.05, 0.05);
   meteor.radius = 22 * scale;
+
+  // EXERCISE 4 — draggable meteors: grab one and fling it into your orb.
+  meteor.eventMode = 'static';
+  meteor.cursor = 'grab';
+  meteor.on('pointerdown', () => {
+    if (state !== 'play') return;
+    dragTarget = meteor;
+    meteor.cursor = 'grabbing';
+  });
+
   world.addChild(meteor);
   meteors.push(meteor);
 }
@@ -570,6 +582,7 @@ function spawnHeart() {
 function removeFrom(list, obj) {
   const i = list.indexOf(obj);
   if (i !== -1) list.splice(i, 1);
+  if (obj === dragTarget) dragTarget = null;
   // CONCEPT 16 — destroy() removes it from its parent and frees its resources.
   // The shared texture is NOT destroyed (that's the default), so others keep it.
   obj.destroy();
@@ -595,8 +608,26 @@ const hits = (ax, ay, ar, bx, by, br) => (ax - bx) ** 2 + (ay - by) ** 2 < (ar +
 app.stage.eventMode = 'static';
 app.stage.hitArea = app.screen;
 app.stage.on('pointermove', (e) => {
+  if (dragTarget) {
+    // EXERCISE 4 — e.global is in screen space; convert it into world space
+    // (the world shakes, so they're not always the same).
+    const p = world.toLocal(e.global);
+    dragTarget.vx = clamp(p.x - dragTarget.x, -12, 12); // remember the swipe
+    dragTarget.vy = clamp(p.y - dragTarget.y, -12, 12); // …for the fling
+    dragTarget.position.set(p.x, p.y);
+    return; // don't steer the ship while dragging
+  }
   targetX = e.global.x; // e.global = pointer position in screen/stage space
 });
+
+// EXERCISE 4 — release on pointerup, and ALSO on pointerupoutside (the button
+// was released after the pointer left the object), or the drag gets stuck.
+function endDrag() {
+  if (dragTarget) dragTarget.cursor = 'grab';
+  dragTarget = null;
+}
+app.stage.on('pointerup', endDrag);
+app.stage.on('pointerupoutside', endDrag);
 
 const normKey = (e) => (e.key.length === 1 ? e.key.toLowerCase() : e.key);
 window.addEventListener('keydown', (e) => {
@@ -712,8 +743,10 @@ function updateMeteors(dt) {
   const orbPos = orbPositionInWorld();
   for (let i = meteors.length - 1; i >= 0; i--) {
     const m = meteors[i];
-    m.x += m.vx * dt;
-    m.y += m.vy * dt;
+    if (m !== dragTarget) { // the pointer moves a dragged meteor, not physics
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+    }
     m.rotation += m.spin * dt;
 
     if (hits(m.x, m.y, m.radius, orbPos.x, orbPos.y, 14 * ship.scale.x)) {
@@ -727,7 +760,10 @@ function updateMeteors(dt) {
       game.hitFlash = 24;
       burst(m.x, m.y, 0xff4d6d, 30);
       removeFrom(meteors, m);
-    } else if (m.y > app.screen.height + 60) {
+    } else if (
+      m.y > app.screen.height + 60 || m.y < -200 || // flung meteors can leave
+      m.x < -100 || m.x > app.screen.width + 100    // through any edge now
+    ) {
       removeFrom(meteors, m);
     }
   }
